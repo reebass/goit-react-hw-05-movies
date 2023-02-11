@@ -1,34 +1,78 @@
-import { useState, useEffect } from "react";
-import { fetchFilmById } from "API/Api";
-import {useParams} from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react';
+import { fetchFilmById } from 'API/Api';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { MovieInfo } from 'components/MovieInfo/MovieInfo';
+import { Loader } from 'components/Loader/Loader';
+import styled from 'styled-components';
+import {BsFillArrowLeftCircleFill} from 'react-icons/bs'
 
 
-export const MovieDetails = () => {
-  const [movieDetails, setMovieDetails] = useState('')
-  const {movieId} = useParams();
+
+export default function MovieDetails () {
+  const [movieDetails, setMovieDetails] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { movieId } = useParams();
+  const location = useLocation();
+  const backLinkHref = location.state?.from ?? '/';
+  const backlinkRef = useRef(backLinkHref);
 
   useEffect(() => {
+    const controller = new AbortController();
     const getMovieById = async () => {
-        try{
-            const resp = await fetchFilmById(movieId)
-            setMovieDetails(resp)
-            console.log(resp)
-        }
-        catch (error) {
-            console.log(error)
-        }
-    }
+      try {
+        setIsLoading(true);
+        const resp = await fetchFilmById(movieId, controller.signal);
+        setMovieDetails(resp);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getMovieById();
+    return () => controller.abort()
+  }, [movieId]);
 
-    getMovieById()
-  }, [movieId])
   return (
     <>
-        {movieDetails && 
-            <div>
-                <img src={`https://image.tmdb.org/t/p/w400/${movieDetails.poster_path}`} alt="" />
-                <h1>{movieDetails.title}</h1>
-            </div>
-        }
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <>
+          <BackLink to={backlinkRef.current}>
+            <BsFillArrowLeftCircleFill/>
+            Go Back</BackLink>
+          <MovieInfo movieDetails={movieDetails} />
+        </>
+      )}
     </>
-  )
+  );
 };
+
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 130px;
+  margin: 0;
+  padding: 5px;
+
+  background-color: #f5f5f5;
+  color: #123c4a;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  text-align: center;
+  border-radius: 10px;
+
+  transition: color 300ms ease, background-color 300ms ease;
+
+  :hover {
+    background-color: #ed9547;
+  color: #f5f5f5;
+  }
+
+`
